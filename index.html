@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#090b18">
+<title>Neon Dojo: Two-Player Fighter</title>
+<style>
+*{box-sizing:border-box}
+:root{color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{margin:0;min-height:100vh;min-height:100dvh;padding:10px;background:radial-gradient(ellipse at 50% -15%,#29325d 0,#111426 48%,#080914 100%);color:#f8f8ff}
+.game{width:min(100%,960px);margin:auto}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}
+h1{margin:0;font-size:clamp(20px,5vw,31px);font-weight:950;letter-spacing:.04em}
+h1 span{color:#a995ff}
+.tag{color:#aab4d5;font-size:10px;font-weight:750;letter-spacing:.16em;text-align:right}
+.arena{position:relative;overflow:hidden;border:1px solid #91a0ff33;border-radius:18px;background:#101329;box-shadow:0 16px 60px #0009,0 0 34px #7a5cff13}
+canvas{display:block;width:100%;height:auto;aspect-ratio:900/440;touch-action:none}
+.hud{position:absolute;top:12px;left:12px;right:12px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;pointer-events:none}
+.hud-side{min-width:0}
+.hud-name{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-size:11px;font-weight:900;letter-spacing:.06em;text-shadow:0 2px 9px #000}
+.hud-name.right{flex-direction:row-reverse}
+.health{height:13px;overflow:hidden;border:1px solid #ffffff3b;border-radius:20px;background:#111528d9;box-shadow:0 2px 8px #0008}
+.health-fill{display:block;width:100%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#3effcb,#b2ff71);box-shadow:0 0 12px #64ffbd;transition:width .12s}
+.health-fill.right{margin-left:auto;background:linear-gradient(90deg,#ffc466,#ff507b);box-shadow:0 0 12px #ff6684}
+.timer{min-width:50px;padding:4px 8px;text-align:center;border:1px solid #ffffff2b;border-radius:12px;background:#0b0d1dc9;color:#fff;font-size:20px;font-weight:950;font-variant-numeric:tabular-nums;text-shadow:0 0 14px #a78bff}
+.message{position:absolute;top:48%;left:0;right:0;transform:translateY(-50%);text-align:center;color:#fff;font-size:clamp(24px,7vw,48px);font-weight:1000;letter-spacing:.1em;text-shadow:0 0 10px #fff,0 0 28px #a665ff,0 5px 20px #000;pointer-events:none}
+.message small{display:block;margin-top:5px;color:#e0e2ff;font-size:11px;font-weight:650;letter-spacing:.08em;text-shadow:0 2px 8px #000}
+.uploads{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:9px 0}
+.upload{display:flex;align-items:center;gap:8px;min-width:0;padding:7px 9px;border:1px solid #ffffff1d;border-radius:12px;background:linear-gradient(130deg,#1c2039,#121527)}
+.preview{width:35px;height:35px;flex:none;border:1px solid #a18bff66;border-radius:10px;object-fit:cover;background:linear-gradient(145deg,#6a63f5,#e24791)}
+.upload label{min-width:0;flex:1;color:#dce1f4;font-size:10px}
+.upload strong{display:block;margin-bottom:2px;color:#fff;font-size:11px}
+.upload input{display:block;width:100%;max-width:100%;font-size:9px;color:#aeb8d8}
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.panel{min-width:0;padding:8px;border:1px solid #ffffff20;border-radius:14px;background:linear-gradient(145deg,#1a1e35,#101322);box-shadow:0 5px 18px #0004}
+.panel-title{display:flex;justify-content:space-between;align-items:center;margin:0 2px 7px;font-size:11px;font-weight:950;letter-spacing:.06em}
+.panel-title .p1{color:#78ffe0}
+.panel-title .p2{color:#ff9bb3}
+.panel-title small{color:#9ba4c8;font-size:9px;font-weight:600;letter-spacing:0}
+.buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+button{min-width:0;min-height:52px;padding:3px;border:1px solid #ffffff22;border-radius:11px;background:linear-gradient(180deg,#303651,#1b2033);color:#fff;font:800 10px system-ui;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 0 #080a12;cursor:pointer}
+button:active,button.down{transform:translateY(2px);background:#424b70;box-shadow:0 1px 0 #080a12}
+button.primary{border-color:#a58aff77;background:linear-gradient(140deg,#7968ff,#a447eb)}
+button.secondary{border-color:#ff91a777;background:linear-gradient(140deg,#e25a80,#9f315d)}
+.icon{display:block;font-size:16px;line-height:19px}
+.footer{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:9px;color:#aab4d5;font-size:10px}
+.footer button{min-height:34px;padding:4px 12px;font-size:10px}
+@media(max-width:420px){
+body{padding:7px}
+header{margin-bottom:7px}
+.tag{max-width:112px;font-size:8px;letter-spacing:.1em}
+.hud{top:8px;left:8px;right:8px;gap:6px}
+.hud-name{font-size:9px;margin-bottom:4px}
+.health{height:10px}
+.timer{min-width:39px;padding:3px 5px;font-size:16px}
+.uploads{gap:5px;margin:7px 0}
+.upload{gap:5px;padding:6px}
+.preview{width:29px;height:29px}
+.upload strong{font-size:10px}
+.upload input{font-size:8px}
+.panels{gap:5px}
+.panel{padding:6px}
+.panel-title{font-size:10px;margin-bottom:6px}
+.buttons{gap:4px}
+button{min-height:48px;border-radius:9px;font-size:9px}
+.icon{font-size:14px;line-height:17px}
+.footer{font-size:9px}
+.footer button{min-height:32px}
+}
+</style>
+</head>
+<body>
+<main class="game">
+<header>
+<h1>NEON <span>DOJO</span></h1>
+<div class="tag">TWO PLAYERS · SAME PHONE</div>
+</header>
+
+<section class="arena">
+<canvas id="arena" width="900" height="440" aria-label="Two-player fighting game arena"></canvas>
+<div class="hud">
+<div class="hud-side">
+<div class="hud-name"><span>PLAYER 1</span><span id="leftScore">0</span></div>
+<div class="health"><i class="health-fill" id="leftHealth"></i></div>
+</div>
+<div class="timer" id="timer">60</div>
+<div class="hud-side">
+<div class="hud-name right"><span>PLAYER 2</span><span id="rightScore">0</span></div>
+<div class="health"><i class="health-fill right" id="rightHealth"></i></div>
+</div>
+</div>
+<div class="message" id="message">READY?<small>Tap any control to begin</small></div>
+</section>
+
+<section class="uploads">
+<div class="upload">
+<img class="preview" id="leftPreview" alt="Player 1 fighter">
+<label><strong>Player 1 photo</strong><input id="leftFile" type="file" accept="image/*"></label>
+</div>
+<div class="upload">
+<img class="preview" id="rightPreview" alt="Player 2 fighter">
+<label><strong>Player 2 photo</strong><input id="rightFile" type="file" accept="image/*"></label>
+</div>
+</section>
+
+<section class="panels">
+<div class="panel">
+<div class="panel-title"><span class="p1">◆ PLAYER 1</span><small>LEFT SIDE</small></div>
+<div class="buttons">
+<button data-player="left" data-action="left" aria-label="Player 1 move left"><span class="icon">←</span>LEFT</button>
+<button data-player="left" data-action="jump" aria-label="Player 1 jump"><span class="icon">↑</span>JUMP</button>
+<button data-player="left" data-action="right" aria-label="Player 1 move right"><span class="icon">→</span>RIGHT</button>
+<button data-player="left" data-action="block" aria-label="Player 1 block">🛡 BLOCK</button>
+<button data-player="left" data-action="punch" class="primary" aria-label="Player 1 punch">👊 PUNCH</button>
+<button data-player="left" data-action="kick" aria-label="Player 1 kick">🦶 KICK</button>
+</div>
+</div>
+<div class="panel">
+<div class="panel-title"><span class="p2">◆ PLAYER 2</span><small>RIGHT SIDE</small></div>
+<div class="buttons">
+<button data-player="right" data-action="left" aria-label="Player 2 move left"><span class="icon">←</span>LEFT</button>
+<button data-player="right" data-action="jump" aria-label="Player 2 jump"><span class="icon">↑</span>JUMP</button>
+<button data-player="right" data-action="right" aria-label="Player 2 move right"><span class="icon">→</span>RIGHT</button>
+<button data-player="right" data-action="block" aria-label="Player 2 block">🛡 BLOCK</button>
+<button data-player="right" data-action="punch" class="secondary" aria-label="Player 2 punch">👊 PUNCH</button>
+<button data-player="right" data-action="kick" aria-label="Player 2 kick">🦶 KICK</button>
+</div>
+</div>
+</section>
+
+<div class="footer">
+<span>Hold movement or block · Tap punch, kick, or jump</span>
+<button id="restart">NEW ROUND</button>
+</div>
+</main>
+<script>
+const canvas=document.getElementById("arena");
+const ctx=canvas.getContext("2d");
+const get=id=>document.getElementById(id);
+const players={
+left:{x:245,hp:100,jump:0,vy:0,attack:"",attackTime:0,attackChecked:false,block:false,flash:0,glow:"#66ffe0"},
+right:{x:655,hp:100,jump:0,vy:0,attack:"",attackTime:0,attackChecked:false,block:false,flash:0,glow:"#ff688f"}
+};
+const images={left:null,right:null};
+const held={left:{},right:{}};
+const particles=[];
+let running=false,ended=false,time=60,last=performance.now(),scores=[0,0],messageTime=0,elapsed=0;
+function resize(){
+const rect=canvas.getBoundingClientRect();
+const scale=Math.min(devicePixelRatio||1,2);
+canvas.width=Math.round(rect.width*scale);
+canvas.height=Math.round(rect.height*scale);
+ctx.setTransform(canvas.width/900,0,0,canvas.height/440,0,0)
+}
+new ResizeObserver(resize).observe(canvas);
+function loadImage(input,side){
+input.addEventListener("change",()=>{
+const file=input.files&&input.files[0];
+if(!file)return;
+const url=URL.createObjectURL(file);
+const image=new Image();
+image.onload=()=>{images[side]=image;get(side+"Preview").src=url};
+image.src=url
+})
+}
+loadImage(get("leftFile"),"left");
+loadImage(get("rightFile"),"right");
+function start(){
+if(ended)resetRound();
+running=true;
+get("message").innerHTML="FIGHT!";
+messageTime=850
+}
+function resetRound(){
+players.left.x=245;
+players.right.x=655;
+for(const p of Object.values(players)){
+p.hp=100;p.jump=0;p.vy=0;p.attack="";p.attackTime=0;p.attackChecked=false;p.block=false;p.flash=0
+}
+held.left={};
+held.right={};
+particles.length=0;
+time=60;running=false;ended=false;
+get("message").innerHTML="READY?<small>Tap any control to begin</small>";
+updateHud()
+}
+function updateHud(){
+get("leftHealth").style.width=Math.max(0,players.left.hp)+"%";
+get("rightHealth").style.width=Math.max(0,players.right.hp)+"%";
+get("timer").textContent=Math.ceil(time);
+get("leftScore").textContent=scores[0];
+get("rightScore").textContent=scores[1]
+}
+function performAction(side,action){
+if(!running&&!ended)start();
+if(ended)return;
+const p=players[side];
+if(action==="jump"&&p.jump===0)p.vy=10;
+if(action==="block")p.block=true;
+if((action==="punch"||action==="kick")&&p.attackTime===0){
+p.attack=action;
+p.attackTime=action==="punch"?20:26;
+p.attackChecked=false
+}
+}
+function bindButton(button){
+const side=button.dataset.player;
+const action=button.dataset.action;
+const continuous=action==="left"||action==="right"||action==="block";
+const release=()=>{
+button.classList.remove("down");
+if(continuous){
+held[side][action]=false;
+if(action==="block")players[side].block=false
+}
+};
+button.addEventListener("pointerdown",event=>{
+event.preventDefault();
+button.classList.add("down");
+try{button.setPointerCapture(event.pointerId)}catch{}
+if(continuous){
+if(!running&&!ended)start();
+held[side][action]=true;
+if(action==="block")players[side].block=true
+}else performAction(side,action)
+});
+button.addEventListener("pointerup",release);
+button.addEventListener("pointercancel",release);
+button.addEventListener("lostpointercapture",release)
+}
+document.querySelectorAll("[data-player][data-action]").forEach(bindButton);
+const keyBindings={
+KeyA:["left","left"],KeyD:["left","right"],KeyW:["left","jump"],KeyF:["left","punch"],KeyG:["left","kick"],KeyH:["left","block"],
+ArrowLeft:["right","left"],ArrowRight:["right","right"],ArrowUp:["right","jump"],Numpad1:["right","punch"],Numpad2:["right","kick"],Numpad3:["right","block"]
+};
+window.addEventListener("keydown",event=>{
+const binding=keyBindings[event.code];
+if(!binding)return;
+event.preventDefault();
+const [side,action]=binding;
+if(!held[side][action])performAction(side,action);
+held[side][action]=true
+});
+window.addEventListener("keyup",event=>{
+const binding=keyBindings[event.code];
+if(!binding)return;
+const [side,action]=binding;
+held[side][action]=false;
+if(action==="block")players[side].block=false
+});
+window.addEventListener("blur",()=>{
+held.left={};
+held.right={};
+players.left.block=false;
+players.right.block=false
+});
+get("restart").addEventListener("click",()=>{resetRound();start()});
+function roundedRect(x,y,w,h,r){
+const radius=Math.min(r,w/2,h/2);
+ctx.beginPath();
+ctx.moveTo(x+radius,y);
+ctx.arcTo(x+w,y,x+w,y+h,radius);
+ctx.arcTo(x+w,y+h,x,y+h,radius);
+ctx.arcTo(x,y+h,x,y,radius);
+ctx.arcTo(x,y,x+w,y,radius);
+ctx.closePath()
+}
+function drawBackground(){
+const bg=ctx.createLinearGradient(0,0,0,440);
+bg.addColorStop(0,"#13162e");
+bg.addColorStop(.46,"#29254c");
+bg.addColorStop(.72,"#161a32");
+bg.addColorStop(1,"#0b0d1b");
+ctx.fillStyle=bg;
+ctx.fillRect(0,0,900,440);
+const glow=ctx.createRadialGradient(450,150,30,450,210,440);
+glow.addColorStop(0,"#9d55ff22");
+glow.addColorStop(1,"#9d55ff00");
+ctx.fillStyle=glow;
+ctx.fillRect(0,0,900,440);
+for(let i=0;i<12;i++){
+const x=i*82+8;
+const h=70+(i*37%92);
+ctx.fillStyle=i%2?"#10142b":"#17182f";
+ctx.fillRect(x,210-h,58,h);
+ctx.fillStyle=i%2?"#68dcff44":"#ff66b144";
+for(let j=0;j<3;j++){
+ctx.fillRect(x+11+j*14,224-h,4,5);
+ctx.fillRect(x+11+j*14,239-h,4,5)
+}
+}
+ctx.fillStyle="#11152a";
+ctx.fillRect(0,245,900,195);
+ctx.fillStyle="#ff5fbd";
+ctx.shadowColor="#ff5fbd";
+ctx.shadowBlur=15;
+ctx.fillRect(0,245,900,3);
+ctx.shadowBlur=0;
+ctx.fillStyle="#383156";
+ctx.fillRect(0,250,900,6);
+ctx.fillStyle="#211f3e";
+ctx.beginPath();
+ctx.moveTo(0,258);ctx.lineTo(900,258);ctx.lineTo(900,440);ctx.lineTo(0,440);ctx.fill();
+ctx.save();
+ctx.strokeStyle="#a58dff26";
+ctx.lineWidth=1;
+for(let i=-7;i<=7;i++){
+ctx.beginPath();
+ctx.moveTo(450+i*17,260);
+ctx.lineTo(450+i*76,440);
+ctx.stroke()
+}
+for(let y=0;y<7;y++){
+const yy=262+y*y*4.1;
+ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(900,yy);ctx.stroke()
+}
+ctx.restore();
+ctx.fillStyle="#ffffff08";
+ctx.beginPath();ctx.ellipse(450,343,270,28,0,0,Math.PI*2);ctx.fill();
+ctx.strokeStyle="#b19bff44";
+ctx.lineWidth=2;
+ctx.beginPath();ctx.ellipse(450,343,270,28,0,0,Math.PI*2);ctx.stroke();
+const pulse=.5+Math.sin(elapsed/240)*.5;
+for(const x of [112,788]){
+ctx.fillStyle="#fff";
+ctx.shadowColor=x<450?"#56ffe0":"#ff5c97";
+ctx.shadowBlur=16+12*pulse;
+ctx.beginPath();ctx.arc(x,245,5,0,Math.PI*2);ctx.fill()
+}
+ctx.shadowBlur=0
+}
+function drawFighter(side){
+const p=players[side],image=images[side];
+const direction=side==="left"?1:-1;
+const base=333-p.jump;
+const attackPose=p.attackTime>0?1:0;
+ctx.save();
+ctx.translate(p.x,base);
+ctx.scale(direction,1);
+ctx.fillStyle="#0008";
+ctx.beginPath();ctx.ellipse(0,5,42+Math.min(p.jump,22),8,0,0,Math.PI*2);ctx.fill();
+ctx.shadowColor=p.glow;
+ctx.shadowBlur=18;
+ctx.fillStyle=p.glow+"25";
+ctx.beginPath();ctx.ellipse(0,-44,34,54,0,0,Math.PI*2);ctx.fill();
+ctx.shadowBlur=0;
+ctx.fillStyle="#18172d";
+roundedRect(-23,-35,18,43,8);ctx.fill();
+roundedRect(5,-35,18,43,8);ctx.fill();
+ctx.fillStyle=side==="left"?"#62ffe0":"#ff698e";
+roundedRect(-25,-2,24,8,4);ctx.fill();
+roundedRect(2,-2,24,8,4);ctx.fill();
+const torso=ctx.createLinearGradient(-25,-85,25,-25);
+torso.addColorStop(0,side==="left"?"#88fff0":"#ff9caf");
+torso.addColorStop(.45,side==="left"?"#25bfae":"#d34470");
+torso.addColorStop(1,side==="left"?"#126f82":"#792750");
+ctx.fillStyle=torso;
+ctx.beginPath();ctx.moveTo(-20,-83);ctx.quadraticCurveTo(0,-94,20,-83);ctx.lineTo(27,-35);ctx.quadraticCurveTo(0,-25,-27,-35);ctx.closePath();ctx.fill();
+ctx.fillStyle="#f3f0ff";
+ctx.globalAlpha=.85;
+ctx.beginPath();ctx.moveTo(-20,-79);ctx.lineTo(0,-69);ctx.lineTo(20,-79);ctx.lineTo(13,-63);ctx.lineTo(-13,-63);ctx.closePath();ctx.fill();
+ctx.globalAlpha=1;
+ctx.fillStyle="#19172c";
+ctx.beginPath();ctx.arc(0,-105,24,0,Math.PI*2);ctx.fill();
+if(image){
+ctx.save();
+ctx.beginPath();ctx.arc(0,-106,19,0,Math.PI*2);ctx.clip();
+ctx.drawImage(image,-20,-126,40,40);
+ctx.restore()
+}else{
+ctx.fillStyle=side==="left"?"#e7b59f":"#f0b99f";
+ctx.beginPath();ctx.arc(0,-105,18,0,Math.PI*2);ctx.fill();
+ctx.fillStyle=side==="left"?"#2a2344":"#472438";
+ctx.beginPath();ctx.arc(0,-112,19,Math.PI,Math.PI*2);ctx.fill();
+ctx.fillRect(-18,-113,36,7);
+ctx.fillStyle="#242035";
+ctx.beginPath();ctx.arc(7,-105,2,0,Math.PI*2);ctx.fill()
+}
+ctx.fillStyle=side==="left"?"#7c66ff":"#ff4d83";
+ctx.shadowColor=p.glow;
+ctx.shadowBlur=10;
+ctx.beginPath();ctx.moveTo(-19,-122);ctx.lineTo(18,-119);ctx.lineTo(24,-113);ctx.lineTo(-17,-115);ctx.closePath();ctx.fill();
+ctx.shadowBlur=0;
+ctx.fillStyle=side==="left"?"#1a2338":"#2c1a31";
+ctx.strokeStyle=side==="left"?"#54f8dd":"#ff658e";
+ctx.lineWidth=7;
+ctx.lineCap="round";
+ctx.beginPath();ctx.moveTo(-18,-75);ctx.lineTo(-31,-49);ctx.lineTo(-24,-39);ctx.stroke();
+ctx.beginPath();ctx.moveTo(18,-75);ctx.lineTo(31,-53);ctx.lineTo(25,-43);ctx.stroke();
+const gloveX=attackPose?42:29;
+ctx.fillStyle=side==="left"?"#7affde":"#ff7799";
+ctx.shadowColor=p.glow;
+ctx.shadowBlur=10;
+ctx.beginPath();ctx.arc(attackPose?gloveX:31,-49,10,0,Math.PI*2);ctx.fill();
+ctx.beginPath();ctx.arc(-24,-39,9,0,Math.PI*2);ctx.fill();
+ctx.shadowBlur=0;
+if(p.block){
+ctx.strokeStyle=side==="left"?"#80fff0":"#ff9db9";
+ctx.lineWidth=4;
+ctx.globalAlpha=.72;
+ctx.beginPath();ctx.arc(0,-65,48,-1.2,1.2);ctx.stroke();
+ctx.globalAlpha=1
+}
+if(p.attackTime>0){
+ctx.strokeStyle=p.attack==="kick"?"#ffe08a":"#ffffff";
+ctx.lineWidth=p.attack==="kick"?7:5;
+ctx.globalAlpha=.65;
+ctx.beginPath();
+ctx.moveTo(17,-58);
+ctx.quadraticCurveTo(48,-53,68,-66);
+ctx.stroke();
+ctx.globalAlpha=1
+}
+if(p.flash>0){
+ctx.fillStyle="#ffffff88";
+ctx.beginPath();ctx.arc(0,-73,38,0,Math.PI*2);ctx.fill()
+}
+ctx.restore()
+}
+function addImpact(x,y,color){
+for(let i=0;i<13;i++){
+const angle=Math.random()*Math.PI*2;
+const speed=1+Math.random()*5;
+particles.push({x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,life:20+Math.random()*12,color,size:2+Math.random()*3})
+}
+}
+function drawParticles(dt){
+for(let i=particles.length-1;i>=0;i--){
+const p=particles[i];
+p.x+=p.vx*dt/16;
+p.y+=p.vy*dt/16;
+p.vy+=.06*dt/16;
+p.life-=dt/16;
+ctx.globalAlpha=Math.max(0,p.life/25);
+ctx.fillStyle=p.color;
+ctx.shadowColor=p.color;
+ctx.shadowBlur=10;
+ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();
+if(p.life<=0)particles.splice(i,1)
+}
+ctx.globalAlpha=1;
+ctx.shadowBlur=0
+}
+function checkHit(attacker,defender,winner){
+const impactFrame=attacker.attack==="kick"?14:10;
+if(!attacker.attack||attacker.attackTime!==impactFrame||attacker.attackChecked)return;
+attacker.attackChecked=true;
+if(Math.abs(attacker.x-defender.x)<(attacker.attack==="kick"?117:96)){
+const damage=attacker.attack==="kick"?14:10;
+defender.hp=Math.max(0,defender.hp-(defender.block?damage*.2:damage));
+defender.flash=8;
+addImpact((attacker.x+defender.x)/2,290-defender.jump,defender.block?"#8deaff":attacker.glow);
+if(defender.hp===0)finish(winner)
+}
+}
+function finish(winner){
+running=false;
+ended=true;
+scores[winner==="left"?0:1]++;
+get("message").innerHTML=(winner==="left"?"PLAYER 1 WINS!":"PLAYER 2 WINS!")+"<small>Tap NEW ROUND to play again</small>";
+updateHud()
+}
+function update(dt){
+elapsed+=dt;
+if(!running)return;
+time=Math.max(0,time-dt/1000);
+if(time===0){
+finish(players.left.hp>=players.right.hp?"left":"right");
+return
+}
+for(const side of ["left","right"]){
+const p=players[side],controls=held[side];
+if(controls.left)p.x=Math.max(70,p.x-3.7);
+if(controls.right)p.x=Math.min(830,p.x+3.7);
+if(controls.jump&&p.jump===0)p.vy=10;
+p.block=!!controls.block;
+if(controls.punch&&p.attackTime===0){p.attack="punch";p.attackTime=20;p.attackChecked=false}
+if(controls.kick&&p.attackTime===0){p.attack="kick";p.attackTime=26;p.attackChecked=false}
+if(p.jump>0||p.vy>0){
+p.jump+=p.vy;
+p.vy-=.48;
+if(p.jump<=0){p.jump=0;p.vy=0}
+}
+if(p.attackTime>0){
+p.attackTime--;
+if(p.attackTime===0)p.attack=""
+}
+if(p.flash>0)p.flash--
+}
+checkHit(players.left,players.right,"left");
+checkHit(players.right,players.left,"right");
+if(messageTime>0){
+messageTime-=dt;
+if(messageTime<=0)get("message").innerHTML=""
+}
+updateHud()
+}
+function draw(dt){
+drawBackground();
+drawFighter("left");
+drawFighter("right");
+drawParticles(dt)
+}
+function loop(now){
+const dt=Math.min(40,now-last);
+last=now;
+update(dt);
+draw(dt);
+requestAnimationFrame(loop)
+}
+resize();
+updateHud();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
